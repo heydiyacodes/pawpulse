@@ -4,3 +4,4 @@ qrcode[pil]
 pillow
 python-dotenv
 werkzeug
+gunicorn
