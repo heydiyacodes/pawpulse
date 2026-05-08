@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% block title %}Emergency #{{ report.id }} — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap">
+
+  <!-- ── HEADER ── -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
+    <div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
+        <a href="{{ url_for('emergencies_list') }}" class="btn btn-ghost btn-sm">← All cases</a>
+        <span style="color:var(--stone);font-size:.82rem">Emergency #{{ report.id }}</span>
+      </div>
+      <h1 style="font-size:1.8rem">{{ report.location_text or 'Emergency report' }}</h1>
+      <p class="text-dim" style="margin-top:.3rem">
+        Reported {{ report.created_at.strftime('%d %b %Y at %I:%M %p') }}
+        {% if report.reporter_name %} · by {{ report.reporter_name }}{% endif %}
+      </p>
+    </div>
+
+    <div>
+      {% if report.status == 'open' %}
+        <span class="badge badge-rust" style="font-size:.85rem;padding:.35rem .9rem">● Open</span>
+      {% elif report.status == 'assigned' %}
+        <span class="badge badge-terra" style="font-size:.85rem;padding:.35rem .9rem">● Assigned</span>
+      {% else %}
+        <span class="badge badge-sage" style="font-size:.85rem;padding:.35rem .9rem">✓ Resolved</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="dash-two-col">
+
+    <!-- ── LEFT: Report details ── -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+      <!-- Photo -->
+      {% if report.photo_url %}
+      <div class="card">
+        <img src="{{ report.photo_url }}" alt="Emergency photo"
+             style="width:100%;max-height:320px;object-fit:cover"/>
+      </div>
+      {% endif %}
+
+      <!-- Description -->
+      <div class="card">
+        <div class="card-header"><h3>What was reported</h3></div>
+        <div class="card-body">
+          <p style="font-size:.95rem;line-height:1.7">{{ report.description }}</p>
+          {% if report.dog %}
+          <div style="margin-top:1rem;padding:.75rem;background:var(--cream-2);border-radius:var(--radius-sm)">
+            <span class="text-dim" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.4px;font-weight:700">Registered dog</span><br/>
+            <a href="{{ url_for('dog_profile', dog_id=report.dog.id) }}" class="text-terra" style="font-weight:700">
+              {{ report.dog.name }} — {{ report.dog.area or 'Unknown area' }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Reporter contact -->
+      {% if report.reporter_name or report.reporter_phone %}
+      <div class="card">
+        <div class="card-header"><h3>Reporter contact</h3></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:.55rem">
+          {% if report.reporter_name %}
+          <div class="profile-meta-row">
+            <span class="label">Name</span>{{ report.reporter_name }}
+          </div>
+          {% endif %}
+          {% if report.reporter_phone %}
+          <div class="profile-meta-row">
+            <span class="label">Phone</span>
+            <a href="tel:{{ report.reporter_phone }}" class="text-terra" style="font-weight:700">
+              {{ report.reporter_phone }}
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Resolution notes (if resolved) -->
+      {% if report.status == 'resolved' %}
+      <div class="card" style="border-left:3px solid var(--sage)">
+        <div class="card-header"><h3>Resolution</h3>
+          <span class="text-dim" style="font-size:.78rem">{{ report.resolved_at.strftime('%d %b %Y, %I:%M %p') if report.resolved_at }}</span>
+        </div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:.55rem">
+          {% if report.resolution_notes %}
+          <p style="font-size:.9rem">{{ report.resolution_notes }}</p>
+          {% endif %}
+          {% if report.next_step %}
+          <div style="padding:.7rem;background:var(--sage-light);border-radius:var(--radius-sm);font-size:.88rem;color:#3d6b41;font-weight:600">
+            📌 Next step: {{ report.next_step }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- ── RIGHT: Dispatch panel ── -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+
+      <!-- Timeline -->
+      <div class="card">
+        <div class="card-header"><h3>Dispatch timeline</h3></div>
+        <div class="card-body">
+          <div class="timeline">
+
+            <!-- Step 1: Reported -->
+            <div class="timeline-item">
+              <div class="timeline-dot" style="border-color:var(--terra);color:var(--terra)">1</div>
+              <div class="timeline-body">
+                <h4>Emergency reported</h4>
+                <p>{{ report.created_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+                {% if report.location_text %}<p class="text-dim">📍 {{ report.location_text }}</p>{% endif %}
+              </div>
+            </div>
+
+            <!-- Step 2: Assigned -->
+            <div class="timeline-item">
+              <div class="timeline-dot"
+                style="{{ 'border-color:var(--terra);color:var(--terra)' if report.assigned_at else '' }}">
+                {{ '2' }}
+              </div>
+              <div class="timeline-body">
+                <h4 class="{{ '' if report.assigned_at else 'text-dim' }}">Assigned to responder</h4>
+                {% if report.assigned_at %}
+                  <p>{{ report.assigned_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+                  {% if report.time_to_assign_minutes is not none %}
+                  <p class="text-dim">{{ report.time_to_assign_minutes }} min after report</p>
+                  {% endif %}
+                {% else %}
+                  <p class="text-dim">Pending assignment</p>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Step 3: Responder details -->
+            {% if report.assigned_ngo %}
+            <div class="timeline-item">
+              <div class="timeline-dot" style="font-size:1rem">👤</div>
+              <div class="timeline-body">
+                <h4>{{ report.assigned_ngo.name }}</h4>
+                {% if report.assigned_ngo.phone %}
+                <p><a href="tel:{{ report.assigned_ngo.phone }}" class="text-terra" style="font-weight:700">
+                  📞 {{ report.assigned_ngo.phone }}
+                </a></p>
+                {% endif %}
+                {% if report.assigned_ngo.email %}
+                <p><a href="mailto:{{ report.assigned_ngo.email }}" class="text-terra" style="font-weight:700">
+                  ✉ {{ report.assigned_ngo.email }}
+                </a></p>
+                {% endif %}
+                {% if report.assigned_ngo.area %}
+                <p class="text-dim">{{ report.assigned_ngo.area }}</p>
+                {% endif %}
+                {% if report.distance_km %}
+                <p class="text-dim">{{ report.distance_km }} km from incident</p>
+                {% endif %}
+                {% if report.assigned_ngo.is_ngo %}
+                <span class="badge badge-ngo" style="margin-top:.3rem">NGO</span>
+                {% endif %}
+              </div>
+            </div>
+            {% elif report.assigned_to %}
+            <div class="timeline-item">
+              <div class="timeline-dot" style="font-size:1rem">👤</div>
+              <div class="timeline-body">
+                <h4>{{ report.assigned_to }}</h4>
+                <p class="text-dim">Contact details not available</p>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Step 4: Resolved -->
+            <div class="timeline-item">
+              <div class="timeline-dot"
+                style="{{ 'border-color:var(--sage);color:var(--sage)' if report.resolved_at else '' }}">
+                {{ '✓' if report.resolved_at else '4' }}
+              </div>
+              <div class="timeline-body">
+                <h4 class="{{ '' if report.resolved_at else 'text-dim' }}">Resolved</h4>
+                {% if report.resolved_at %}
+                  <p>{{ report.resolved_at.strftime('%d %b %Y, %I:%M %p') }}</p>
+                  {% if report.time_to_resolve_minutes is not none %}
+                  <p class="text-dim">{{ report.time_to_resolve_minutes }} min from assignment to close</p>
+                  {% endif %}
+                {% else %}
+                  <p class="text-dim">Not yet resolved</p>
+                {% endif %}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Action panel (only for logged-in users) -->
+      {% if current_feeder %}
+
+        <!-- Take case (if open) -->
+        {% if report.status == 'open' %}
+        <div class="card" style="border-left:3px solid var(--terra)">
+          <div class="card-header"><h3>Take this case</h3></div>
+          <div class="card-body">
+            <p class="text-dim" style="font-size:.85rem;margin-bottom:1rem">
+              Claiming this case assigns it to you and notifies the reporter.
+            </p>
+            <form method="POST" action="{{ url_for('update_emergency_status', report_id=report.id) }}">
+              <input type="hidden" name="status" value="assigned"/>
+              <input type="hidden" name="next" value="{{ url_for('dispatch_detail', report_id=report.id) }}"/>
+              <button type="submit" class="btn btn-primary btn-block">I'll handle this case</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Re-assign (NGO only, while assigned) -->
+        {% if report.status == 'assigned' and current_feeder.is_ngo and nearby %}
+        <div class="card">
+          <div class="card-header"><h3>Nearby NGOs</h3></div>
+          <div class="card-body">
+            <p class="text-dim" style="font-size:.82rem;margin-bottom:.75rem">Reassign to a closer responder if needed.</p>
+            {% for dist_km, ngo in nearby %}
+            {% if ngo.id != report.assigned_ngo_id %}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border)">
+              <div>
+                <strong style="font-size:.88rem">{{ ngo.name }}</strong>
+                <div class="text-dim" style="font-size:.76rem">
+                  {{ '%.1f'|format(dist_km) }} km away
+                  {% if ngo.phone %} · {{ ngo.phone }}{% endif %}
+                </div>
+              </div>
+              <form method="POST" action="{{ url_for('update_emergency_status', report_id=report.id) }}" style="margin:0">
+                <input type="hidden" name="status" value="assigned"/>
+                <input type="hidden" name="next" value="{{ url_for('dispatch_detail', report_id=report.id) }}"/>
+                <button type="submit" class="btn btn-outline btn-sm">Assign</button>
+              </form>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Mark resolved (if assigned) -->
+        {% if report.status in ['open', 'assigned'] %}
+        <div class="card" style="border-left:3px solid var(--sage)">
+          <div class="card-header"><h3>Mark as resolved</h3></div>
+          <div class="card-body">
+            <form method="POST" action="{{ url_for('update_emergency_status', report_id=report.id) }}">
+              <input type="hidden" name="status" value="resolved"/>
+              <input type="hidden" name="next" value="{{ url_for('dispatch_detail', report_id=report.id) }}"/>
+              <div class="form-group">
+                <label class="form-label">What was done? *</label>
+                <textarea name="resolution_notes" class="form-control" required
+                  placeholder="e.g. Dog transported to CUPA clinic. Leg fracture confirmed. Under treatment."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Next step</label>
+                <input name="next_step" class="form-control"
+                  placeholder="e.g. Follow-up vet visit on 15 June"/>
+              </div>
+              <button type="submit" class="btn btn-sage btn-block">✓ Mark resolved</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

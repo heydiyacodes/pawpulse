@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Report Emergency — PawPulse{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="form-page-header">
+    <h1>🚨 Report an emergency</h1>
+    <p>Spotted an injured or sick dog? Report it — the nearest available NGO will be automatically alerted.</p>
+  </div>
+  <form method="POST" enctype="multipart/form-data">
+
+    <div class="form-section">
+      <div class="form-section-title">What's happening</div>
+      <div class="form-group">
+        <label class="form-label">Describe the emergency *</label>
+        <textarea name="description" class="form-control" required rows="4"
+          placeholder="e.g. Brown indie dog hit by bike near Madhapur signal. Back leg injured, can't stand. Dog is conscious."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Is this a registered dog?</label>
+        <select name="dog_id" class="form-control">
+          <option value="">Unknown / Not registered</option>
+          {% for dog in dogs %}
+          <option value="{{ dog.id }}" {{ 'selected' if request.args.get('dog_id')|int == dog.id }}>
+            {{ dog.name }} — {{ dog.area or 'Unknown area' }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Upload a photo</label>
+        <div class="upload-zone" onclick="document.getElementById('emgPhoto').click()">
+          <input type="file" id="emgPhoto" name="photo" accept="image/*" onchange="previewEmg(this)"/>
+          <div class="upload-zone-icon" id="emgIcon">📷</div>
+          <p><strong>Click to upload</strong> a photo of the injured dog</p>
+          <img id="emgPreview" style="display:none;max-height:130px;margin:.65rem auto 0;border-radius:8px"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Exact location</div>
+      <p class="text-dim" style="font-size:.83rem;margin-bottom:.7rem">Click the map to drop a pin, or use your GPS for instant accuracy.</p>
+      <div id="loc-map"></div>
+      <div style="display:flex;gap:.5rem;margin:.65rem 0">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="useGPS()">📍 Use my GPS</button>
+        <span id="locStatus" style="font-size:.8rem;color:var(--stone);align-self:center"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Describe location in words</label>
+        <input name="location_text" class="form-control" placeholder="e.g. Near Dominos, Madhapur main road"/>
+      </div>
+      <div class="loc-coords">
+        <input type="number" step="any" name="latitude"  id="lat" placeholder="Latitude"/>
+        <input type="number" step="any" name="longitude" id="lng" placeholder="Longitude"/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Your contact (optional)</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Your name</label><input name="reporter_name" class="form-control" placeholder="So we can reach you"/></div>
+        <div class="form-group"><label class="form-label">Phone</label><input name="reporter_phone" class="form-control" placeholder="+91 …"/></div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-danger btn-lg btn-block">🚨 Submit Emergency Report</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const locMap = L.map('loc-map').setView([17.3850, 78.4867], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(locMap);
+let marker = null;
+
+function setPin(lat, lng) {
+  if (marker) marker.setLatLng([lat, lng]);
+  else { marker = L.marker([lat, lng], { draggable:true }).addTo(locMap); marker.on('dragend', e => { const ll=e.target.getLatLng(); setCoords(ll.lat,ll.lng); }); }
+  setCoords(lat, lng); locMap.setView([lat, lng], 15);
+}
+function setCoords(lat, lng) {
+  document.getElementById('lat').value = lat.toFixed(6);
+  document.getElementById('lng').value = lng.toFixed(6);
+  document.getElementById('locStatus').textContent = `Pinned: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+locMap.on('click', e => setPin(e.latlng.lat, e.latlng.lng));
+function useGPS() {
+  document.getElementById('locStatus').textContent = 'Locating…';
+  navigator.geolocation?.getCurrentPosition(p => setPin(p.coords.latitude, p.coords.longitude), () => { document.getElementById('locStatus').textContent = 'GPS unavailable.'; });
+}
+function previewEmg(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => { document.getElementById('emgPreview').src=e.target.result; document.getElementById('emgPreview').style.display='block'; document.getElementById('emgIcon').textContent='✓'; };
+  reader.readAsDataURL(input.files[0]);
+}
+</script>
+{% endblock %}

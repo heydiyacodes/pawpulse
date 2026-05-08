@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Live Map — PawPulse{% endblock %}
+
+{% block body %}
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand"><span class="paw">🐾</span> PawPulse</a>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}">Home</a></li>
+    <li><a href="{{ url_for('map_view') }}" class="active">Live Map</a></li>
+    <li><a href="{{ url_for('emergencies_list') }}">Emergencies</a></li>
+    {% if current_feeder %}<li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>{% endif %}
+  </ul>
+  <div class="nav-right">
+    {% if current_feeder %}
+      <a href="{{ url_for('register_dog') }}" class="btn btn-primary btn-sm">+ Register Dog</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-ghost btn-sm">Logout</a>
+    {% else %}
+      <a href="{{ url_for('report_emergency') }}" class="btn btn-danger btn-sm">🚨 SOS</a>
+      <a href="{{ url_for('login') }}" class="btn btn-outline btn-sm">Login</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div class="flash-container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+    <div class="flash flash-{{ category }}">
+      <span>{{ '✓' if category == 'success' else '!' }}</span>{{ message }}
+      <button class="flash-close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<div class="map-page">
+  <div id="map"></div>
+
+  <div class="map-float map-top-bar">
+    <input class="map-search" type="text" id="searchInput" placeholder="Search dog name or area…"/>
+    <button class="map-filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="map-filter-btn"        onclick="setFilter('dogs',this)">🐶 Dogs</button>
+    <button class="map-filter-btn"        onclick="setFilter('emergency',this)">🚨 Emergencies</button>
+    <a href="{{ url_for('report_emergency') }}" class="btn btn-danger btn-sm" style="flex-shrink:0">+ Report</a>
+  </div>
+
+  <div class="map-float map-legend">
+    <h4>Legend</h4>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--terra)"></div> Registered dog</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--rust)"></div> Open emergency</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--sage)"></div> Resolved</div>
+  </div>
+
+  <div class="map-float map-stats">
+    <div class="map-stat"><div class="n terra" id="mStatDogs">{{ dog_count }}</div><div class="l">Dogs</div></div>
+    <div style="height:1px;background:var(--border)"></div>
+    <div class="map-stat"><div class="n rust"  id="mStatOpen">{{ open_count }}</div><div class="l">Emergencies</div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const map = L.map('map', { zoomControl: false }).setView([17.3850, 78.4867], 12);
+
+// Warm, light CartoDB tiles
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+}).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+function makeIcon(color, emoji) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;background:${color};
+      border:2px solid rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;
+      font-size:15px;transform:rotate(-45deg);box-shadow:0 3px 10px rgba(46,38,32,0.25)">
+      <span style="transform:rotate(45deg)">${emoji}</span></div>`,
+    iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -34]
+  });
+}
+
+const dogIcon = makeIcon('var(--terra)', '🐶');
+const emgIcon = makeIcon('var(--rust)',  '🚨');
+
+let dogMarkers = [], emgMarkers = [], allDogs = [], allEmg = [];
+
+async function loadDogs() {
+  allDogs = await (await fetch('/api/dogs')).json();
+  renderDogs(allDogs);
+  document.getElementById('mStatDogs').textContent = allDogs.length;
+}
+async function loadEmg() {
+  allEmg = await (await fetch('/api/emergencies')).json();
+  renderEmg(allEmg);
+  document.getElementById('mStatOpen').textContent = allEmg.length;
+}
+
+function renderDogs(dogs) {
+  dogMarkers.forEach(m => map.removeLayer(m));
+  dogMarkers = dogs.map(d =>
+    L.marker([d.latitude, d.longitude], { icon: dogIcon }).addTo(map)
+      .bindPopup(`<div class="map-popup">
+        <strong>${d.name}</strong>
+        <div class="area">📍 ${d.area||'Unknown'} · ${d.is_vaccinated?'✓ Vaccinated':'Needs vaccine'}</div>
+        <a href="${d.profile_url}" class="btn btn-primary btn-sm btn-block">View Profile</a>
+      </div>`)
+  );
+}
+function renderEmg(reports) {
+  emgMarkers.forEach(m => map.removeLayer(m));
+  emgMarkers = reports.filter(r => r.latitude && r.longitude).map(r =>
+    L.marker([r.latitude, r.longitude], { icon: emgIcon }).addTo(map)
+      .bindPopup(`<div class="map-popup">
+        <strong>🚨 Emergency</strong>
+        <div class="area">📍 ${r.location_text||'See details'}</div>
+        <p style="font-size:.79rem;color:var(--ink-muted);margin-bottom:.55rem">${r.description.substring(0,80)}…</p>
+        <a href="/emergencies" class="btn btn-danger btn-sm btn-block">View Cases</a>
+      </div>`)
+  );
+}
+
+let currentFilter = 'all';
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.map-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  dogMarkers.forEach(m => (f==='all'||f==='dogs') ? map.addLayer(m) : map.removeLayer(m));
+  emgMarkers.forEach(m => (f==='all'||f==='emergency') ? map.addLayer(m) : map.removeLayer(m));
+}
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  renderDogs(q ? allDogs.filter(d => d.name.toLowerCase().includes(q)||(d.area||'').toLowerCase().includes(q)) : allDogs);
+});
+
+loadDogs(); loadEmg();
+setInterval(() => { loadDogs(); loadEmg(); }, 30000);
+</script>
+{% endblock %}

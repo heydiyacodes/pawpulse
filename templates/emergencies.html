@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Emergencies — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <div class="section-title">
+    <h2>Emergency cases</h2>
+    <a href="{{ url_for('report_emergency') }}" class="btn btn-danger btn-sm">+ Report new</a>
+  </div>
+
+  <div style="display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap">
+    {% for label, val in [('All','all'),('Open','open'),('Assigned','assigned'),('Resolved','resolved')] %}
+    <a href="{{ url_for('emergencies_list', status=val) }}"
+       class="map-filter-btn {{ 'active' if status_filter==val }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if reports %}
+  <div class="emergency-list">
+    {% for r in reports %}
+    <div class="emergency-item {{ r.status }}">
+      {% if r.photo_url %}
+      <img src="{{ r.photo_url }}" style="width:70px;height:70px;object-fit:cover;border-radius:10px;flex-shrink:0"/>
+      {% else %}
+      <div style="width:70px;height:70px;background:var(--cream-2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.7rem;flex-shrink:0">🐶</div>
+      {% endif %}
+      <div class="emergency-item-content">
+        <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:.2rem">
+          {% if r.status=='open' %}<span class="badge badge-rust">Open</span>
+          {% elif r.status=='assigned' %}<span class="badge badge-terra">Assigned</span>
+          {% else %}<span class="badge badge-sage">Resolved</span>{% endif %}
+          {% if r.dog %}<span class="badge badge-stone">{{ r.dog.name }}</span>{% endif %}
+          <strong style="font-size:.88rem">{{ r.location_text or 'Location not specified' }}</strong>
+        </div>
+        <p>{{ r.description[:160] }}{% if r.description|length>160 %}…{% endif %}</p>
+        <div class="meta">
+          {{ r.created_at.strftime('%d %b %Y, %I:%M %p') }}
+          {% if r.reporter_name %} · {{ r.reporter_name }}{% endif %}
+          {% if r.assigned_to %} · <strong>Assigned to {{ r.assigned_to }}</strong>{% endif %}
+          {% if r.resolved_at %} · Resolved {{ r.resolved_at.strftime('%d %b') }}{% endif %}
+        </div>
+      </div>
+      {% if current_feeder and r.status != 'resolved' %}
+      <div class="emergency-actions">
+        {% if r.status == 'open' %}
+        <form method="POST" action="{{ url_for('update_emergency_status', report_id=r.id) }}">
+          <input type="hidden" name="status" value="assigned"/>
+          <button type="submit" class="btn btn-outline btn-sm">Take case</button>
+        </form>
+        {% endif %}
+        <form method="POST" action="{{ url_for('update_emergency_status', report_id=r.id) }}">
+          <input type="hidden" name="status" value="resolved"/>
+          <button type="submit" class="btn btn-sage btn-sm">✓ Resolve</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">✅</div>
+    <h3>No {{ status_filter if status_filter != 'all' else '' }} emergencies</h3>
+    <p>{{ 'All clear.' if status_filter=='all' else 'Nothing here right now.' }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

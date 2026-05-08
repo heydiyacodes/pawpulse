@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile — PawPulse{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="form-page-header">
+    <h1>My profile</h1>
+    <p>Update your contact details and location so you can be dispatched accurately.</p>
+  </div>
+
+  <!-- Role pill -->
+  <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.75rem">
+    {% if feeder.is_ngo %}
+      <span class="badge badge-ngo" style="font-size:.8rem;padding:.3rem .8rem">NGO</span>
+      {% if feeder.is_verified %}
+        <span class="badge badge-sage">✓ Verified</span>
+      {% else %}
+        <span class="badge badge-terra">Pending verification</span>
+        <span class="text-dim" style="font-size:.82rem">An admin will verify your NGO status.</span>
+      {% endif %}
+    {% else %}
+      <span class="badge badge-stone">Feeder</span>
+    {% endif %}
+    <span class="text-dim" style="font-size:.8rem">Joined {{ feeder.created_at.strftime('%B %Y') }}</span>
+  </div>
+
+  <form method="POST" action="{{ url_for('edit_profile') }}">
+
+    <div class="form-section">
+      <div class="form-section-title">Personal info</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Name *</label>
+          <input name="name" class="form-control" value="{{ feeder.name }}" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Area</label>
+          <input name="area" class="form-control" value="{{ feeder.area or '' }}" placeholder="e.g. Madhapur"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input name="phone" class="form-control" value="{{ feeder.phone or '' }}" placeholder="+91 …"/>
+      </div>
+      {% if feeder.is_ngo %}
+      <div class="form-group">
+        <label class="form-label">About your NGO</label>
+        <textarea name="bio" class="form-control" placeholder="Short description of your rescue operations…">{{ feeder.bio or '' }}</textarea>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if feeder.is_ngo %}
+    <div class="form-section">
+      <div class="form-section-title">Your location for dispatch</div>
+      <p class="text-dim" style="font-size:.83rem;margin-bottom:.75rem">
+        This is used by the auto-dispatch system to assign you the nearest emergencies.
+        Click the map to set your NGO's base location.
+      </p>
+      <div id="loc-map"></div>
+      <div style="display:flex;gap:.5rem;margin:.65rem 0">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="useGPS()">📍 Use my GPS</button>
+        <span id="locStatus" class="text-dim" style="font-size:.8rem;align-self:center">
+          {% if feeder.ngo_lat %}Current: {{ '%.4f'|format(feeder.ngo_lat) }}, {{ '%.4f'|format(feeder.ngo_lng) }}{% else %}Not set{% endif %}
+        </span>
+      </div>
+      <div class="loc-coords">
+        <input type="number" step="any" name="ngo_lat" id="lat" placeholder="Latitude"
+               value="{{ feeder.ngo_lat or '' }}"/>
+        <input type="number" step="any" name="ngo_lng" id="lng" placeholder="Longitude"
+               value="{{ feeder.ngo_lng or '' }}"/>
+      </div>
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary btn-lg btn-block">Save changes</button>
+  </form>
+
+  <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border)">
+    <p class="text-dim" style="font-size:.82rem">
+      Logged in as <strong>{{ feeder.email }}</strong> ·
+      <a href="{{ url_for('logout') }}" class="text-terra">Logout</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if feeder.is_ngo %}
+<script>
+const initLat = {{ feeder.ngo_lat or 17.3850 }};
+const initLng = {{ feeder.ngo_lng or 78.4867 }};
+const locMap = L.map('loc-map').setView([initLat, initLng], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(locMap);
+let marker = L.marker([initLat, initLng], { draggable:true }).addTo(locMap);
+
+function setCoords(lat, lng) {
+  document.getElementById('lat').value = lat.toFixed(6);
+  document.getElementById('lng').value = lng.toFixed(6);
+  document.getElementById('locStatus').textContent = `Set: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+locMap.on('click', e => { marker.setLatLng(e.latlng); setCoords(e.latlng.lat, e.latlng.lng); });
+marker.on('dragend', e => { const ll = e.target.getLatLng(); setCoords(ll.lat, ll.lng); });
+function useGPS() {
+  navigator.geolocation?.getCurrentPosition(p => {
+    locMap.setView([p.coords.latitude, p.coords.longitude], 15);
+    marker.setLatLng([p.coords.latitude, p.coords.longitude]);
+    setCoords(p.coords.latitude, p.coords.longitude);
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

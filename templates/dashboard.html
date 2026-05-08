@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
+    <div>
+      <h1>{{ 'NGO Dashboard' if feeder.is_ngo else 'My Dashboard' }}</h1>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.4rem;flex-wrap:wrap">
+        <span class="text-dim" style="font-size:.88rem">{{ feeder.area or 'No area set' }}</span>
+        {% if feeder.is_ngo %}
+          <span class="badge badge-ngo">NGO</span>
+          {% if feeder.is_verified %}
+            <span class="badge badge-sage">✓ Verified</span>
+          {% else %}
+            <span class="badge badge-terra">Pending verification</span>
+          {% endif %}
+        {% else %}
+          <span class="badge badge-stone">Feeder</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+      <a href="{{ url_for('edit_profile') }}" class="btn btn-ghost btn-sm">Edit profile</a>
+      <a href="{{ url_for('register_dog') }}"  class="btn btn-primary btn-sm">+ Register dog</a>
+    </div>
+  </div>
+
+  <!-- NGO location warning -->
+  {% if feeder.is_ngo and not feeder.ngo_lat %}
+  <div style="background:var(--terra-light);border:1px solid #dba882;border-radius:var(--radius-md);padding:1rem 1.25rem;margin-bottom:1.75rem;display:flex;align-items:center;gap:.75rem">
+    <span style="font-size:1.3rem">📍</span>
+    <div>
+      <strong style="font-size:.9rem">Set your location to receive auto-dispatched cases</strong>
+      <p style="font-size:.82rem;color:var(--ink-muted);margin-top:.15rem">
+        Without a location, emergency cases can't be automatically assigned to you.
+        <a href="{{ url_for('edit_profile') }}" class="text-terra" style="font-weight:700">Set it now →</a>
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- KPI strip -->
+  <div class="dash-grid">
+    <div class="kpi-card">
+      <span class="kpi-num">{{ my_dogs|length }}</span>
+      <span class="kpi-label">My dogs</span>
+    </div>
+    <div class="kpi-card danger">
+      <span class="kpi-num">{{ all_open }}</span>
+      <span class="kpi-label">Open emergencies</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-num">{{ all_dogs }}</span>
+      <span class="kpi-label">Total on platform</span>
+    </div>
+    <div class="kpi-card good">
+      <span class="kpi-num">{{ feeder.cases_handled or 0 }}</span>
+      <span class="kpi-label">Cases I've handled</span>
+    </div>
+  </div>
+
+  <!-- NGO: My assigned cases -->
+  {% if feeder.is_ngo and my_cases %}
+  <div style="margin-bottom:2rem">
+    <div class="section-title">
+      <h2>My assigned cases</h2>
+      <a href="{{ url_for('emergencies_list') }}" class="btn btn-ghost btn-sm">All cases →</a>
+    </div>
+    <div class="emergency-list">
+      {% for e in my_cases %}
+      <a href="{{ url_for('dispatch_detail', report_id=e.id) }}"
+         style="text-decoration:none;color:inherit;display:block">
+        <div class="emergency-item {{ e.status }}" style="cursor:pointer">
+          <div class="emergency-item-content">
+            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem;flex-wrap:wrap">
+              {% if e.status == 'open' %}<span class="badge badge-rust">Open</span>
+              {% elif e.status == 'assigned' %}<span class="badge badge-terra">Assigned</span>
+              {% else %}<span class="badge badge-sage">Resolved</span>{% endif %}
+              <strong style="font-size:.9rem">{{ e.location_text or 'No location' }}</strong>
+            </div>
+            <p>{{ e.description[:100] }}{% if e.description|length > 100 %}…{% endif %}</p>
+            <div class="meta">
+              {{ e.created_at.strftime('%d %b, %I:%M %p') }}
+              {% if e.assigned_at %} · Assigned {{ e.assigned_at.strftime('%I:%M %p') }}{% endif %}
+              {% if e.distance_km %} · {{ e.distance_km }} km away{% endif %}
+              {% if e.next_step %} · 📌 {{ e.next_step }}{% endif %}
+            </div>
+          </div>
+          <span style="color:var(--stone);font-size:1.1rem;flex-shrink:0">›</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="dash-two-col">
+
+    <!-- My dogs -->
+    <div>
+      <div class="section-title">
+        <h2>My dogs</h2>
+        <a href="{{ url_for('register_dog') }}" class="btn btn-primary btn-sm">+ Add</a>
+      </div>
+      {% if my_dogs %}
+      <div class="dog-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+        {% for dog in my_dogs %}
+        <a href="{{ url_for('dog_profile', dog_id=dog.id) }}" class="dog-card">
+          {% if dog.photo_url %}<img src="{{ dog.photo_url }}" class="dog-card-img" alt="{{ dog.name }}"/>
+          {% else %}<div class="dog-card-placeholder">🐶</div>{% endif %}
+          <div class="dog-card-body">
+            <strong>{{ dog.name }}</strong>
+            <div class="area">{{ dog.area or '—' }}</div>
+            {% if dog.is_vaccinated %}<span class="badge badge-sage" style="font-size:.62rem">✓ Vacc</span>
+            {% else %}<span class="badge badge-terra" style="font-size:.62rem">Needs vacc</span>{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">🐶</div><h3>No dogs yet</h3>
+        <a href="{{ url_for('register_dog') }}" class="btn btn-primary mt-2">Register first dog</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Open emergencies (available to take) -->
+    <div>
+      <div class="section-title">
+        <h2>Open emergencies</h2>
+        <a href="{{ url_for('emergencies_list') }}" class="btn btn-ghost btn-sm">See all →</a>
+      </div>
+      {% if open_cases %}
+      <div class="emergency-list">
+        {% for e in open_cases %}
+        <div class="emergency-item open">
+          <div class="emergency-item-content">
+            <strong style="font-size:.9rem">{{ e.location_text or 'No location' }}</strong>
+            <p>{{ e.description[:90] }}{% if e.description|length > 90 %}…{% endif %}</p>
+            <div class="meta">{{ e.created_at.strftime('%d %b, %I:%M %p') }} · {{ e.time_open_minutes }} min ago</div>
+          </div>
+          <div class="emergency-actions">
+            <a href="{{ url_for('dispatch_detail', report_id=e.id) }}" class="btn btn-primary btn-sm">View</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="icon">✅</div><h3>All clear</h3><p>No open emergencies.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

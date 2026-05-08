@@ -1,0 +1,6 @@
+flask
+flask-sqlalchemy
+qrcode[pil]
+pillow
+python-dotenv
+werkzeug

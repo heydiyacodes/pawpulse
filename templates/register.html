@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Join PawPulse{% endblock %}
+{% block body %}
+<div class="auth-wrap">
+  <div class="auth-card" style="max-width:500px">
+    <div class="auth-logo">🐾 PawPulse</div>
+    <div class="auth-sub">Join as a feeder or NGO to register dogs and respond to emergencies</div>
+    <form method="POST">
+      <!-- Role selector -->
+      <div class="form-group">
+        <label class="form-label">I am joining as</label>
+        <div class="role-toggle">
+          <div class="role-option">
+            <input type="radio" name="role_select" id="role_feeder" value="feeder" checked/>
+            <label for="role_feeder"><span class="emoji">🙋</span>Individual feeder</label>
+          </div>
+          <div class="role-option">
+            <input type="radio" name="role_select" id="role_ngo" value="ngo"/>
+            <label for="role_ngo"><span class="emoji">🏢</span>NGO / Rescue org</label>
+          </div>
+        </div>
+        <!-- Hidden checkbox that app.py reads -->
+        <input type="checkbox" name="is_ngo" id="isNgoHidden" style="display:none"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full name *</label>
+          <input name="name" class="form-control" placeholder="Your name or org name" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Area</label>
+          <input name="area" class="form-control" placeholder="e.g. Madhapur"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email *</label>
+        <input type="email" name="email" class="form-control" placeholder="you@example.com" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input name="phone" class="form-control" placeholder="+91 …"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input type="password" name="password" class="form-control" placeholder="Min 8 characters" required/>
+      </div>
+      <button type="submit" class="btn btn-primary btn-lg btn-block">Create account</button>
+    </form>
+    <div class="auth-footer">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></div>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('input[name="role_select"]').forEach(r => {
+    r.addEventListener('change', () => {
+      document.getElementById('isNgoHidden').checked = (r.value === 'ngo');
+    });
+  });
+</script>
+{% endblock %}

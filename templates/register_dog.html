@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Register Dog — PawPulse{% endblock %}
+{% block content %}
+<div class="form-page">
+  <div class="form-page-header">
+    <h1>Register a dog</h1>
+    <p>Give a stray dog a permanent digital identity and QR code.</p>
+  </div>
+  <form method="POST" enctype="multipart/form-data">
+
+    <div class="form-section">
+      <div class="form-section-title">Basic info</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Dog's name *</label>
+          <input name="name" class="form-control" placeholder="e.g. Bruno" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Breed</label>
+          <input name="breed" class="form-control" placeholder="e.g. Indie" value="Indie"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Color / markings</label>
+          <input name="color" class="form-control" placeholder="e.g. Brown with white patch"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Area / neighbourhood</label>
+          <input name="area" class="form-control" placeholder="e.g. Madhapur"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control" placeholder="Behaviour, landmarks, extra details…"></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Photo</div>
+      <div class="upload-zone" onclick="document.getElementById('photoInput').click()">
+        <input type="file" id="photoInput" name="photo" accept="image/*" onchange="previewPhoto(this)"/>
+        <div class="upload-zone-icon" id="photoIcon">📷</div>
+        <p><strong>Click to upload</strong> · JPG, PNG, WEBP · max 5 MB</p>
+        <img id="photoPreview" style="display:none;max-height:150px;margin:.75rem auto 0;border-radius:10px"/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Location</div>
+      <p class="text-dim" style="font-size:.83rem;margin-bottom:.7rem">Click the map to pin the dog's usual spot, or use your GPS.</p>
+      <div id="loc-map"></div>
+      <div style="display:flex;gap:.5rem;margin:.65rem 0">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="useMyLocation()">📍 My location</button>
+        <span id="locLabel" style="font-size:.8rem;color:var(--stone);align-self:center"></span>
+      </div>
+      <div class="loc-coords">
+        <input type="number" step="any" name="latitude"  id="lat" placeholder="Latitude"  value="17.3850" required/>
+        <input type="number" step="any" name="longitude" id="lng" placeholder="Longitude" value="78.4867" required/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Health status</div>
+      <div style="display:flex;gap:2rem;margin-bottom:1rem;flex-wrap:wrap">
+        <label class="form-check"><input type="checkbox" name="is_vaccinated"/> Vaccinated</label>
+        <label class="form-check"><input type="checkbox" name="is_sterilised"/> Sterilised / Neutered</label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Medical notes</label>
+        <textarea name="medical_notes" class="form-control" placeholder="Known conditions, injuries, vet history…"></textarea>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg btn-block">🐾 Register &amp; Generate QR Code</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const locMap = L.map('loc-map').setView([17.3850, 78.4867], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:19 }).addTo(locMap);
+let marker = L.marker([17.3850, 78.4867], { draggable:true }).addTo(locMap);
+
+function setCoords(lat, lng) {
+  document.getElementById('lat').value = lat.toFixed(6);
+  document.getElementById('lng').value = lng.toFixed(6);
+  document.getElementById('locLabel').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+}
+locMap.on('click', e => { marker.setLatLng(e.latlng); setCoords(e.latlng.lat, e.latlng.lng); });
+marker.on('dragend', e => { const ll = e.target.getLatLng(); setCoords(ll.lat, ll.lng); });
+function useMyLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    locMap.setView([p.coords.latitude, p.coords.longitude], 15);
+    marker.setLatLng([p.coords.latitude, p.coords.longitude]);
+    setCoords(p.coords.latitude, p.coords.longitude);
+  });
+}
+function previewPhoto(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('photoPreview').src = e.target.result;
+    document.getElementById('photoPreview').style.display = 'block';
+    document.getElementById('photoIcon').textContent = '✓';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+</script>
+{% endblock %}

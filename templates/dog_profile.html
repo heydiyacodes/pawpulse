@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}{{ dog.name }} — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap">
+
+  <div class="profile-hero">
+    <div>
+      <div class="profile-photo-wrap">
+        {% if dog.photo_url %}<img src="{{ dog.photo_url }}" alt="{{ dog.name }}"/>
+        {% else %}<div class="profile-photo-placeholder">🐶</div>{% endif %}
+      </div>
+      {% if dog.qr_code_url %}
+      <div class="qr-block mt-2">
+        <img src="{{ dog.qr_code_url }}" alt="QR code for {{ dog.name }}"/>
+        <div>
+          <strong>Scan to share</strong>
+          <p>Anyone who scans this QR sees {{ dog.name }}'s full profile — medical records, feeder info, and care history.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="profile-info">
+      <div>
+        <div class="profile-name">{{ dog.name }}</div>
+        <div class="text-dim" style="font-size:.9rem;margin-top:.2rem">{{ dog.breed }}{% if dog.color %} · {{ dog.color }}{% endif %}</div>
+      </div>
+      <div class="profile-badges">
+        {% if dog.is_vaccinated %}<span class="badge badge-sage">✓ Vaccinated</span>{% else %}<span class="badge badge-terra">Needs vaccine</span>{% endif %}
+        {% if dog.is_sterilised %}<span class="badge badge-sage">✓ Sterilised</span>{% endif %}
+      </div>
+      <div class="profile-meta">
+        {% if dog.area %}<div class="profile-meta-row"><span class="label">Location</span>📍 {{ dog.area }}</div>{% endif %}
+        {% if dog.feeder %}<div class="profile-meta-row"><span class="label">Cared by</span>{{ dog.feeder.name }}{% if dog.feeder.is_ngo %} <span class="badge badge-ngo" style="font-size:.62rem">NGO</span>{% endif %}</div>{% endif %}
+        <div class="profile-meta-row"><span class="label">Registered</span>{{ dog.created_at.strftime('%d %B %Y') }}</div>
+        {% if dog.medical_notes %}<div class="profile-meta-row" style="align-items:flex-start"><span class="label">Notes</span><span class="text-dim">{{ dog.medical_notes }}</span></div>{% endif %}
+      </div>
+      <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-top:auto">
+        <a href="{{ url_for('report_emergency') }}?dog_id={{ dog.id }}" class="btn btn-danger">🚨 Report Emergency</a>
+        {% if current_feeder %}
+        <button class="btn btn-outline" onclick="document.getElementById('medModal').classList.add('open')">+ Medical Record</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="dash-two-col">
+    <div>
+      <div class="section-title"><h2>Medical history</h2></div>
+      {% if records %}
+      <div class="timeline">
+        {% for r in records %}
+        <div class="timeline-item">
+          <div class="timeline-dot">{{ '💉' if r.record_type=='Vaccination' else '🏥' if r.record_type=='Surgery' else '🔍' }}</div>
+          <div class="timeline-body">
+            <h4>{{ r.record_type or 'Record' }}</h4>
+            <p>{{ r.description }}</p>
+            {% if r.vet_name %}<p>Vet: {{ r.vet_name }}</p>{% endif %}
+            {% if r.cost %}<p class="text-terra">₹{{ '%.0f'|format(r.cost) }}</p>{% endif %}
+            {% if r.receipt_url %}<a href="{{ r.receipt_url }}" target="_blank" class="btn btn-ghost btn-sm mt-1">View receipt</a>{% endif %}
+            <div class="date">{{ r.date.strftime('%d %b %Y') if r.date else '' }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="icon">🩺</div><h3>No records yet</h3><p>Vet visits and vaccinations will appear here.</p></div>
+      {% endif %}
+    </div>
+
+    <div>
+      <div class="section-title"><h2>Emergency history</h2></div>
+      {% if emergencies %}
+      <div class="emergency-list">
+        {% for e in emergencies %}
+        <div class="emergency-item {{ e.status }}">
+          <div class="emergency-item-content">
+            <div style="display:flex;gap:.4rem;align-items:center;margin-bottom:.2rem">
+              {% if e.status=='open' %}<span class="badge badge-rust">Open</span>
+              {% elif e.status=='assigned' %}<span class="badge badge-terra">Assigned</span>
+              {% else %}<span class="badge badge-sage">Resolved</span>{% endif %}
+              <strong style="font-size:.88rem">{{ e.location_text or 'No location' }}</strong>
+            </div>
+            <p>{{ e.description }}</p>
+            <div class="meta">{{ e.created_at.strftime('%d %b %Y') }}{% if e.assigned_to %} · {{ e.assigned_to }}{% endif %}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="icon">✅</div><h3>No emergencies</h3><p>Clean record for {{ dog.name }}.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if current_feeder %}
+<div id="medModal" class="modal-backdrop" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-card">
+    <div class="card-header"><h3>Add medical record for {{ dog.name }}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('medModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('add_medical_record', dog_id=dog.id) }}" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select name="record_type" class="form-control">
+              <option>Vaccination</option><option>Checkup</option><option>Surgery</option><option>Medication</option><option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="{{ now.strftime('%Y-%m-%d') }}"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description *</label>
+          <textarea name="description" class="form-control" required placeholder="What was done?"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Vet name</label><input name="vet_name" class="form-control"/></div>
+          <div class="form-group"><label class="form-label">Cost (₹)</label><input type="number" name="cost" class="form-control" placeholder="0"/></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Receipt photo</label>
+          <input type="file" name="receipt" class="form-control" accept="image/*"/>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Save record</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

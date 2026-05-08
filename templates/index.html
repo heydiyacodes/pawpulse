@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}PawPulse — Home{% endblock %}
+{% block content %}
+<div class="page-wrap">
+
+  <div class="hero">
+    <div class="hero-eyebrow">🐾 Hyderabad's stray dog platform</div>
+    <h1>Every stray dog deserves<br/><em>an identity.</em></h1>
+    <p class="hero-sub">Register dogs, report emergencies, track care. Connecting feeders, NGOs, and citizens.</p>
+    <div class="hero-actions">
+      <a href="{{ url_for('map_view') }}"        class="btn btn-primary btn-lg">View Live Map</a>
+      <a href="{{ url_for('report_emergency') }}" class="btn btn-danger btn-lg">🚨 Report Emergency</a>
+      {% if not current_feeder %}
+      <a href="{{ url_for('register') }}"         class="btn btn-outline btn-lg">Join as Feeder / NGO</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-cell">
+      <span class="num" id="statDogs">{{ total_dogs }}</span>
+      <p>Dogs registered</p>
+    </div>
+    <div class="stat-cell danger">
+      <span class="num" id="statOpen">{{ open_emergencies }}</span>
+      <p>Open emergencies</p>
+    </div>
+    <div class="stat-cell good">
+      <span class="num" id="statFeeders">{{ total_feeders }}</span>
+      <p>Active feeders & NGOs</p>
+    </div>
+  </div>
+
+  {% if recent_dogs %}
+  <div class="section-title">
+    <h2>Recently registered</h2>
+    <a href="{{ url_for('map_view') }}" class="btn btn-ghost btn-sm">See all on map →</a>
+  </div>
+  <div class="dog-grid">
+    {% for dog in recent_dogs %}
+    <a href="{{ url_for('dog_profile', dog_id=dog.id) }}" class="dog-card">
+      {% if dog.photo_url %}<img src="{{ dog.photo_url }}" alt="{{ dog.name }}" class="dog-card-img"/>
+      {% else %}<div class="dog-card-placeholder">🐶</div>{% endif %}
+      <div class="dog-card-body">
+        <strong>{{ dog.name }}</strong>
+        <div class="area">📍 {{ dog.area or 'Unknown area' }}</div>
+        {% if dog.is_vaccinated %}<span class="badge badge-sage">✓ Vaccinated</span>
+        {% else %}<span class="badge badge-terra">Needs vaccine</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if recent_emergencies %}
+  <div class="divider"></div>
+  <div class="section-title">
+    <h2>Open emergencies</h2>
+    <a href="{{ url_for('emergencies_list') }}" class="btn btn-ghost btn-sm">See all →</a>
+  </div>
+  <div class="emergency-list">
+    {% for e in recent_emergencies %}
+    <div class="emergency-item open">
+      <div class="emergency-item-content">
+        <strong>{{ e.location_text or 'Location not specified' }}</strong>
+        <p>{{ e.description[:120] }}{% if e.description|length > 120 %}…{% endif %}</p>
+        <div class="meta">{{ e.created_at.strftime('%d %b %Y, %I:%M %p') }}{% if e.reporter_name %} · {{ e.reporter_name }}{% endif %}</div>
+      </div>
+      <span class="badge badge-rust">Open</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  async function refreshStats() {
+    try {
+      const d = await (await fetch('/api/stats')).json();
+      document.getElementById('statDogs').textContent    = d.dogs;
+      document.getElementById('statOpen').textContent    = d.open;
+      document.getElementById('statFeeders').textContent = d.feeders;
+    } catch(e) {}
+  }
+  setInterval(refreshStats, 30000);
+</script>
+{% endblock %}
