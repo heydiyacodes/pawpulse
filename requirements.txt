@@ -5,3 +5,4 @@ pillow
 python-dotenv
 werkzeug
 gunicorn
+psycopg2-binary==2.10.1
