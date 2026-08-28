@@ -563,6 +563,15 @@ def feed_dog(dog_id):
     feeder = get_current_feeder()
     notes = request.form.get("notes", "").strip() or None
 
+    # Prevent duplicate feeding logs within 60 seconds (accidental double-clicks / refresh)
+    last_log = (FeedingLog.query
+                .filter_by(dog_id=dog.id, feeder_id=feeder.id)
+                .order_by(FeedingLog.fed_at.desc())
+                .first())
+    if last_log and (datetime.utcnow() - last_log.fed_at).total_seconds() < 60:
+        flash(f"Feeding for {dog.name} was already logged!", "info")
+        return redirect(url_for("dog_profile", dog_id=dog.id))
+
     log = FeedingLog(
         dog_id=dog.id,
         feeder_id=feeder.id,
