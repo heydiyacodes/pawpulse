@@ -64,7 +64,7 @@ SEED_PASSWORD = "pawpulse123"
 # ── Dogs ──────────────────────────────────────────────────────
 # (name, breed, color, lat, lng, area, vaccinated, sterilised, notes)
 DOGS = [
-    ("Bruno",   "Indie",        "Brown",        17.4156, 78.4347, "Banjara Hills",  True,  True,  "Friendly, sterilised"),
+    ("charlie",   "Indie",        "Brown",        17.4156, 78.4347, "Banjara Hills",  True,  True,  "Friendly, sterilised"),
     ("Moti",    "Indie",        "White",        17.4500, 78.3800, "Jubilee Hills",  True,  False, "Limps slightly, monitored"),
     ("Kalu",    "Indie",        "Black",        17.4123, 78.4678, "Madhapur",       False, False, "Very shy, leave food and step back"),
     ("Rani",    "Indie mix",    "Brown-white",  17.4402, 78.3947, "Kondapur",       True,  False, "Nursing pups nearby"),
@@ -72,7 +72,7 @@ DOGS = [
     ("Bholi",   "Labrador mix", "Yellow",       17.4900, 78.3600, "Begumpet",       True,  True,  "Very gentle, good with kids"),
     ("Rocky",   "Indie",        "Grey",         17.3600, 78.4750, "Tolichowki",     False, False, "Needs rabies booster"),
     ("Simba",   "Indie",        "Brown",        17.4300, 78.4800, "HITEC City",     True,  True,  "Guard dog for the park"),
-    ("Laxmi",   "Indie",        "Black-white",  17.4050, 78.4600, "Kukatpally",     False, False, "Pregnant, due soon"),
+    ("vanilla",   "Indie",        "Black-white",  17.4050, 78.4600, "Kukatpally",     False, False, "Pregnant, due soon"),
     ("Charlie", "Indie mix",    "Tan",          17.4700, 78.4200, "Secunderabad",   True,  True,  "Old dog, about 10 yrs"),
     ("Pinki",   "Spitz mix",    "White",        17.4250, 78.4550, "Ameerpet",       True,  True,  "Lost eye in accident, adapted well"),
     ("Coffee",    "Indie",        "Brown",      17.3950, 78.4700, "Nanakramguda",   True,  False, "Loves mango season"),
@@ -81,7 +81,7 @@ DOGS = [
     ("Roja",    "Indie mix",    "Red-brown",    17.3750, 78.5100, "LB Nagar",       True,  True,  "Recovered from mange"),
     ("Hero",    "Indie",        "Black",        17.4800, 78.5000, "Uppal",          False, False, "Injured back paw, healing"),
     ("Junior",   "Indie",        "Brown",        17.4000, 78.3900, "Manikonda",      True,  True,  "Feeds from Patel family daily"),
-    ("Diya",    "Indie",        "Cream",        17.4350, 78.4700, "Madhapur",       True,  True,  "Follows school kids every morning"),
+    ("bruno",    "Indie",        "Cream",        17.4350, 78.4700, "Madhapur",       True,  True,  "Follows school kids every morning"),
     ("Tuffie",   "Indie mix",    "Grey-white",   17.4550, 78.4400, "Borabanda",      False, False, "Needs deworming"),
     ("Bunty",   "Indie",        "Tan",          17.3700, 78.4900, "Attapur",        True,  True,  "Local favourite at chai stall"),
 ]
@@ -121,6 +121,9 @@ EMERGENCIES = [
 def seed():
     with app.app_context():
         # ── Wipe existing data cleanly ────────────────────────
+        from models import FeedingLog, MedicalRecord
+        FeedingLog.query.delete()
+        MedicalRecord.query.delete()
         EmergencyReport.query.delete()
         Dog.query.delete()
         Feeder.query.delete()
