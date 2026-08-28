@@ -603,6 +603,17 @@ def api_feeding_logs(dog_id):
     } for l in logs])
 
 
+@app.route("/seed-db")
+def seed_db_endpoint():
+    """One-time database seed route for cloud deployments without shell access (e.g. Render free tier)."""
+    try:
+        from seed import seed
+        seed()
+        return "<h3>✓ Database seeded successfully with demo dogs & data!</h3><p><a href='/'>Go to homepage</a></p>"
+    except Exception as e:
+        return f"<h3>Seeding error/status:</h3><p>{e}</p><p><a href='/'>Go to homepage</a></p>"
+
+
 # ══════════════════════════════════════════════════════════════
 #  BOOTSTRAP DB ON STARTUP
 # ══════════════════════════════════════════════════════════════
