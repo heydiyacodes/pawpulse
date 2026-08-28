@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Confirm UPI Pledge — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap" style="max-width: 650px;">
+  <div class="card">
+    <div class="card-header">
+      <h2>💳 Confirm UPI Pledge for {{ sponsorship.dog.name }}</h2>
+      <p class="text-dim">Direct monthly sponsorship pledge: <strong>₹{{ '%.0f'|format(sponsorship.monthly_amount) }}/month</strong></p>
+    </div>
+    <div class="card-body">
+      <div style="background:var(--cream-bg, #F9F6F0);padding:1.25rem;border-radius:12px;margin-bottom:1.5rem;text-align:center;">
+        <div style="font-size: 2.5rem;margin-bottom:0.5rem;">📲</div>
+        <h3>Pay via UPI</h3>
+        <p>Transfer ₹{{ '%.0f'|format(sponsorship.monthly_amount) }} to the feeder/NGO UPI VPA below:</p>
+        <div style="font-size:1.25rem;font-weight:bold;color:var(--terracotta,#D97457);margin:0.5rem 0;">
+          {{ sponsorship.dog.feeder.phone }}@upi
+        </div>
+        <p class="text-dim" style="font-size:0.85rem;">(Cared by: {{ sponsorship.dog.feeder.name }})</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('confirm_upi', sponsorship_id=sponsorship.id) }}">
+        <div class="form-group">
+          <label class="form-label">UPI Reference / UTR Number (Optional)</label>
+          <input type="text" name="upi_reference" class="form-control" placeholder="12-digit UPI transaction reference number"/>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Confirm Pledge & View My Sponsorships</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

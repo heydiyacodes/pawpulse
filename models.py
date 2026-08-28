@@ -243,3 +243,73 @@ class FeedingLog(db.Model):
     def __repr__(self):
         return f"<FeedingLog id={self.id} dog_id={self.dog_id} feeder_id={self.feeder_id}>"
 
+
+# ──────────────────────────────────────────────────────────────
+#  SPONSORSHIP & MEDICAL FUNDS — Phase 3
+# ──────────────────────────────────────────────────────────────
+class Sponsorship(db.Model):
+    __tablename__ = "sponsorship"
+
+    id             = db.Column(db.Integer, primary_key=True)
+    dog_id         = db.Column(db.Integer, db.ForeignKey("dog.id"), nullable=False)
+    donor_id       = db.Column(db.Integer, db.ForeignKey("feeder.id"), nullable=False)
+    monthly_amount = db.Column(db.Float, nullable=False)
+    start_date     = db.Column(db.DateTime, default=datetime.utcnow)
+    upi_id         = db.Column(db.String(100))
+    upi_reference  = db.Column(db.String(100))
+    status         = db.Column(db.String(20), default="active")  # "active" | "cancelled"
+    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+
+    dog   = db.relationship("Dog", backref=db.backref("sponsorships", lazy=True, order_by="desc(Sponsorship.created_at)"))
+    donor = db.relationship("Feeder", backref=db.backref("sponsorships", lazy=True, order_by="desc(Sponsorship.created_at)"))
+
+    def __repr__(self):
+        return f"<Sponsorship id={self.id} dog_id={self.dog_id} donor_id={self.donor_id} amount={self.monthly_amount}>"
+
+
+class MedicalFund(db.Model):
+    __tablename__ = "medical_fund"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    dog_id          = db.Column(db.Integer, db.ForeignKey("dog.id"), nullable=False)
+    ngo_id          = db.Column(db.Integer, db.ForeignKey("feeder.id"), nullable=False)
+    title           = db.Column(db.String(150), nullable=False)
+    description     = db.Column(db.Text, nullable=False)
+    target_amount   = db.Column(db.Float, nullable=False)
+    current_pledged = db.Column(db.Float, default=0.0)
+    upi_id          = db.Column(db.String(100))
+    upi_reference   = db.Column(db.String(100))
+    status          = db.Column(db.String(20), default="open")  # "open" | "funded" | "closed"
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow)
+
+    dog = db.relationship("Dog", backref=db.backref("medical_funds", lazy=True, order_by="desc(MedicalFund.created_at)"))
+    ngo = db.relationship("Feeder", backref=db.backref("created_funds", lazy=True, order_by="desc(MedicalFund.created_at)"))
+
+    @property
+    def progress_percent(self):
+        if not self.target_amount or self.target_amount <= 0:
+            return 0
+        pct = (self.current_pledged / self.target_amount) * 100
+        return min(int(pct), 100)
+
+    def __repr__(self):
+        return f"<MedicalFund id={self.id} dog_id={self.dog_id} target={self.target_amount}>"
+
+
+class MedicalFundPledge(db.Model):
+    __tablename__ = "medical_fund_pledge"
+
+    id            = db.Column(db.Integer, primary_key=True)
+    fund_id       = db.Column(db.Integer, db.ForeignKey("medical_fund.id"), nullable=False)
+    donor_id      = db.Column(db.Integer, db.ForeignKey("feeder.id"), nullable=False)
+    amount        = db.Column(db.Float, nullable=False)
+    upi_reference = db.Column(db.String(100))
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    fund  = db.relationship("MedicalFund", backref=db.backref("pledges", lazy=True, order_by="desc(MedicalFundPledge.created_at)"))
+    donor = db.relationship("Feeder", backref=db.backref("fund_pledges", lazy=True, order_by="desc(MedicalFundPledge.created_at)"))
+
+    def __repr__(self):
+        return f"<MedicalFundPledge id={self.id} fund_id={self.fund_id} amount={self.amount}>"
+
+

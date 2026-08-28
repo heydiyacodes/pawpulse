@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Create Medical Fund Drive — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap" style="max-width: 650px;">
+  <div class="card">
+    <div class="card-header">
+      <h2>🏥 Create Medical Fund for {{ dog.name }}</h2>
+      <p class="text-dim">Launch a crowdfunding drive for surgery, vaccination drives, or intensive vet treatment.</p>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('create_medical_fund', dog_id=dog.id) }}">
+        <div class="form-group">
+          <label class="form-label">Campaign Title *</label>
+          <input type="text" name="title" class="form-control" required placeholder="e.g. Leg Surgery & Rehabilitation for {{ dog.name }}"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Target Amount (₹) *</label>
+          <input type="number" name="target_amount" class="form-control" min="100" required placeholder="5000"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description & Medical Reason *</label>
+          <textarea name="description" class="form-control" rows="4" required placeholder="Explain why this medical fund is needed, estimated clinic costs, and vet treatment details..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">NGO UPI ID / VPA (For receiving direct pledges)</label>
+          <input type="text" name="upi_id" class="form-control" placeholder="ngo@upi"/>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Launch Medical Fund Drive →</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

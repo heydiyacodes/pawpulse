@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Donor Dashboard — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap">
+  <div class="profile-hero" style="margin-bottom: 2rem;">
+    <div>
+      <div class="profile-photo-wrap">
+        <div class="profile-photo-placeholder">❤️</div>
+      </div>
+    </div>
+    <div class="profile-info">
+      <div>
+        <div class="profile-name">Donor Dashboard — {{ feeder.name }}</div>
+        <p class="text-dim">Your monthly sponsorships and medical campaign contributions.</p>
+      </div>
+      <div style="display:flex;gap:1.5rem;margin-top:1rem;">
+        <div>
+          <div style="font-size:1.6rem;font-weight:bold;color:var(--terracotta,#D97457);">₹{{ '%.0f'|format(total_monthly) }}</div>
+          <div class="text-dim" style="font-size:0.85rem;">Active Monthly Pledges</div>
+        </div>
+        <div>
+          <div style="font-size:1.6rem;font-weight:bold;color:var(--sage,#A5A595);">₹{{ '%.0f'|format(total_pledged) }}</div>
+          <div class="text-dim" style="font-size:0.85rem;">Total Fund Pledges</div>
+        </div>
+        <div>
+          <div style="font-size:1.6rem;font-weight:bold;">{{ sponsorships|length }}</div>
+          <div class="text-dim" style="font-size:0.85rem;">Sponsored Dogs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-two-col">
+    <div>
+      <div class="section-title"><h2>Active Monthly Sponsorships</h2></div>
+      {% if sponsorships %}
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        {% for s in sponsorships %}
+        <div class="card" style="padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+          <div style="display:flex;align-items:center;gap:1rem;">
+            {% if s.dog.photo_url %}
+            <img src="{{ s.dog.photo_url }}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;" alt="{{ s.dog.name }}"/>
+            {% else %}
+            <div style="width:50px;height:50px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🐶</div>
+            {% endif %}
+            <div>
+              <h4 style="margin:0;"><a href="{{ url_for('dog_profile', dog_id=s.dog.id) }}">{{ s.dog.name }}</a></h4>
+              <div class="text-dim" style="font-size:0.85rem;">📍 {{ s.dog.area or 'Hyderabad' }} · Cared by {{ s.dog.feeder.name if s.dog.feeder else 'Feeder' }}</div>
+              {% if s.upi_reference %}<div class="text-dim" style="font-size:0.75rem;">Ref: {{ s.upi_reference }}</div>{% endif %}
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:bold;font-size:1.1rem;color:var(--terracotta,#D97457);">₹{{ '%.0f'|format(s.monthly_amount) }}/mo</div>
+            <span class="badge badge-sage">{{ s.status|capitalize }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="icon">🐶</div><h3>No active sponsorships</h3><p>Browse dogs on PawPulse and start a monthly pledge!</p></div>
+      {% endif %}
+    </div>
+
+    <div>
+      <div class="section-title"><h2>Medical Fund Contributions</h2></div>
+      {% if pledges %}
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        {% for p in pledges %}
+        <div class="card" style="padding:1rem;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <h4 style="margin:0;"><a href="{{ url_for('medical_fund_detail', fund_id=p.fund.id) }}">{{ p.fund.title }}</a></h4>
+            <div class="text-dim" style="font-size:0.85rem;">Dog: {{ p.fund.dog.name }} · {{ p.created_at.strftime('%d %b %Y') }}</div>
+            {% if p.upi_reference %}<div class="text-dim" style="font-size:0.75rem;">Ref: {{ p.upi_reference }}</div>{% endif %}
+          </div>
+          <div style="font-weight:bold;font-size:1.1rem;color:var(--sage,#A5A595);">+ ₹{{ '%.0f'|format(p.amount) }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="icon">🏥</div><h3>No fund pledges yet</h3><p>Contribute to medical drives for emergency veterinary care.</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

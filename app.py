@@ -15,7 +15,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
-from models import db, Dog, Feeder, MedicalRecord, EmergencyReport, FeedingLog, haversine_km
+from models import db, Dog, Feeder, MedicalRecord, EmergencyReport, FeedingLog, Sponsorship, MedicalFund, MedicalFundPledge, haversine_km
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -528,10 +528,12 @@ def api_emergencies():
 @app.route("/api/stats")
 def api_stats():
     return jsonify({
-        "dogs":     Dog.query.count(),
-        "open":     EmergencyReport.query.filter_by(status="open").count(),
-        "resolved": EmergencyReport.query.filter_by(status="resolved").count(),
-        "feeders":  Feeder.query.count(),
+        "dogs":         Dog.query.count(),
+        "open":         EmergencyReport.query.filter_by(status="open").count(),
+        "resolved":     EmergencyReport.query.filter_by(status="resolved").count(),
+        "feeders":      Feeder.query.count(),
+        "sponsorships": Sponsorship.query.filter_by(status="active").count(),
+        "funds":        MedicalFund.query.filter_by(status="open").count(),
     })
 
 
@@ -614,6 +616,150 @@ def seed_db_endpoint():
         return "<h3>✓ Database seeded successfully with demo dogs & data!</h3><p><a href='/'>Go to homepage</a></p>"
     except Exception as e:
         return f"<h3>Seeding error/status:</h3><p>{e}</p><p><a href='/'>Go to homepage</a></p>"
+
+
+# ══════════════════════════════════════════════════════════════
+#  PHASE 3 — SPONSORSHIP & MEDICAL FUND ROUTES
+# ══════════════════════════════════════════════════════════════
+
+@app.route("/dogs/<int:dog_id>/sponsor", methods=["GET", "POST"])
+@login_required
+def sponsor_dog(dog_id):
+    dog = Dog.query.get_or_404(dog_id)
+    feeder = get_current_feeder()
+
+    if request.method == "POST":
+        amount = float(request.form.get("monthly_amount") or 0)
+        upi_id = request.form.get("upi_id", "").strip()
+        if amount <= 0:
+            flash("Please enter a valid monthly sponsorship amount.", "error")
+            return render_template("sponsor_dog.html", dog=dog)
+
+        sponsorship = Sponsorship(
+            dog_id=dog.id,
+            donor_id=feeder.id,
+            monthly_amount=amount,
+            upi_id=upi_id,
+            status="active"
+        )
+        db.session.add(sponsorship)
+        db.session.commit()
+        return redirect(url_for("confirm_upi", sponsorship_id=sponsorship.id))
+
+    return render_template("sponsor_dog.html", dog=dog)
+
+
+@app.route("/confirm-upi/<int:sponsorship_id>", methods=["GET", "POST"])
+@login_required
+def confirm_upi(sponsorship_id):
+    sponsorship = Sponsorship.query.get_or_404(sponsorship_id)
+    feeder = get_current_feeder()
+    if sponsorship.donor_id != feeder.id:
+        flash("Unauthorized access.", "error")
+        return redirect(url_for("my_sponsorships"))
+
+    if request.method == "POST":
+        ref = request.form.get("upi_reference", "").strip()
+        if ref:
+            sponsorship.upi_reference = ref
+            db.session.commit()
+            flash("UPI payment reference recorded! Thank you for your support.", "success")
+            return redirect(url_for("my_sponsorships"))
+
+    return render_template("confirm_upi.html", sponsorship=sponsorship)
+
+
+@app.route("/my-sponsorships")
+@login_required
+def my_sponsorships():
+    feeder = get_current_feeder()
+    sponsorships = (Sponsorship.query
+                    .filter_by(donor_id=feeder.id)
+                    .order_by(Sponsorship.created_at.desc())
+                    .all())
+    pledges = (MedicalFundPledge.query
+               .filter_by(donor_id=feeder.id)
+               .order_by(MedicalFundPledge.created_at.desc())
+               .all())
+    total_monthly = sum(s.monthly_amount for s in sponsorships if s.status == "active")
+    total_pledged = sum(p.amount for p in pledges)
+
+    return render_template(
+        "my_sponsorships.html",
+        feeder=feeder,
+        sponsorships=sponsorships,
+        pledges=pledges,
+        total_monthly=total_monthly,
+        total_pledged=total_pledged,
+    )
+
+
+@app.route("/medical-funds/create/<int:dog_id>", methods=["GET", "POST"])
+@ngo_required
+def create_medical_fund(dog_id):
+    dog = Dog.query.get_or_404(dog_id)
+    feeder = get_current_feeder()
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        target_amount = float(request.form.get("target_amount") or 0)
+        upi_id = request.form.get("upi_id", "").strip() or feeder.phone
+
+        if not title or not description or target_amount <= 0:
+            flash("Please fill out all required fields with a valid target amount.", "error")
+            return render_template("create_medical_fund.html", dog=dog)
+
+        fund = MedicalFund(
+            dog_id=dog.id,
+            ngo_id=feeder.id,
+            title=title,
+            description=description,
+            target_amount=target_amount,
+            upi_id=upi_id,
+            status="open"
+        )
+        db.session.add(fund)
+        db.session.commit()
+        flash("Medical fund drive created successfully!", "success")
+        return redirect(url_for("medical_fund_detail", fund_id=fund.id))
+
+    return render_template("create_medical_fund.html", dog=dog)
+
+
+@app.route("/medical-funds/<int:fund_id>")
+def medical_fund_detail(fund_id):
+    fund = MedicalFund.query.get_or_404(fund_id)
+    return render_template("medical_fund_detail.html", fund=fund)
+
+
+@app.route("/medical-funds/<int:fund_id>/pledge", methods=["POST"])
+@login_required
+def pledge_medical_fund(fund_id):
+    fund = MedicalFund.query.get_or_404(fund_id)
+    feeder = get_current_feeder()
+    amount = float(request.form.get("amount") or 0)
+    upi_reference = request.form.get("upi_reference", "").strip()
+
+    if amount <= 0:
+        flash("Please enter a valid pledge amount.", "error")
+        return redirect(url_for("medical_fund_detail", fund_id=fund.id))
+
+    pledge = MedicalFundPledge(
+        fund_id=fund.id,
+        donor_id=feeder.id,
+        amount=amount,
+        upi_reference=upi_reference
+    )
+    fund.current_pledged += amount
+    if fund.current_pledged >= fund.target_amount:
+        fund.status = "funded"
+
+    db.session.add(pledge)
+    db.session.commit()
+
+    flash(f"Pledge of ₹{amount:.0f} recorded for {fund.title}! Thank you!", "success")
+    return redirect(url_for("medical_fund_detail", fund_id=fund.id))
 
 
 # ══════════════════════════════════════════════════════════════

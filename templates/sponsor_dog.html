@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Sponsor {{ dog.name }} — PawPulse{% endblock %}
+{% block content %}
+<div class="page-wrap" style="max-width: 650px;">
+  <div class="card">
+    <div class="card-header">
+      <h2>🤝 Sponsor {{ dog.name }}</h2>
+      <p class="text-dim">Support {{ dog.name }}'s daily food, vaccinations, and emergency care with a monthly pledge.</p>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('sponsor_dog', dog_id=dog.id) }}">
+        <div class="form-group">
+          <label class="form-label">Select Monthly Contribution (₹)</label>
+          <div style="display:flex;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <label class="btn btn-outline" style="flex:1;text-align:center;cursor:pointer;">
+              <input type="radio" name="monthly_amount_radio" value="250" onclick="document.getElementById('custom_amount').value=250" checked/> ₹250/mo
+            </label>
+            <label class="btn btn-outline" style="flex:1;text-align:center;cursor:pointer;">
+              <input type="radio" name="monthly_amount_radio" value="500" onclick="document.getElementById('custom_amount').value=500"/> ₹500/mo
+            </label>
+            <label class="btn btn-outline" style="flex:1;text-align:center;cursor:pointer;">
+              <input type="radio" name="monthly_amount_radio" value="1000" onclick="document.getElementById('custom_amount').value=1000"/> ₹1000/mo
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Or Enter Custom Monthly Amount (₹) *</label>
+          <input type="number" id="custom_amount" name="monthly_amount" class="form-control" value="250" min="50" required/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Your UPI ID (Optional)</label>
+          <input type="text" name="upi_id" class="form-control" placeholder="e.g. name@upi"/>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Continue to UPI Confirmation →</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -36,18 +36,47 @@
         {% if dog.medical_notes %}<div class="profile-meta-row" style="align-items:flex-start"><span class="label">Notes</span><span class="text-dim">{{ dog.medical_notes }}</span></div>{% endif %}
       </div>
       <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-top:auto">
+        <a href="{{ url_for('sponsor_dog', dog_id=dog.id) }}" class="btn btn-primary">🤝 Sponsor {{ dog.name }}</a>
         <a href="{{ url_for('report_emergency') }}?dog_id={{ dog.id }}" class="btn btn-danger">🚨 Report Emergency</a>
         {% if current_feeder %}
         <form method="POST" action="{{ url_for('feed_dog', dog_id=dog.id) }}" style="display:inline;">
-          <button type="submit" class="btn btn-primary">🍖 I fed {{ dog.name }} today</button>
+          <button type="submit" class="btn btn-outline">🍖 I fed {{ dog.name }} today</button>
         </form>
         <button class="btn btn-outline" onclick="document.getElementById('medModal').classList.add('open')">+ Medical Record</button>
+        {% if current_feeder.is_ngo %}
+        <a href="{{ url_for('create_medical_fund', dog_id=dog.id) }}" class="btn btn-outline">🏥 Launch Medical Drive</a>
+        {% endif %}
         {% endif %}
       </div>
     </div>
   </div>
 
   <div class="divider"></div>
+
+  {% if dog.medical_funds %}
+  <div style="margin-bottom: 1.5rem;">
+    <div class="section-title"><h2>Active Medical Campaigns</h2></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:1rem;">
+      {% for mf in dog.medical_funds %}
+      <div class="card" style="padding:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+          <h4 style="margin:0;"><a href="{{ url_for('medical_fund_detail', fund_id=mf.id) }}">{{ mf.title }}</a></h4>
+          <span class="badge {{ 'badge-sage' if mf.status=='funded' else 'badge-terra' }}">{{ mf.status|capitalize }}</span>
+        </div>
+        <p style="font-size:0.85rem;margin-bottom:0.75rem;" class="text-dim">{{ mf.description[:100] }}...</p>
+        <div style="width:100%;height:8px;background:#eee;border-radius:4px;overflow:hidden;margin-bottom:0.4rem;">
+          <div style="width:{{ mf.progress_percent }}%;height:100%;background:var(--terracotta,#D97457);"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.8rem;" class="text-dim">
+          <span>₹{{ '%.0f'|format(mf.current_pledged) }} pledged</span>
+          <span>Target: ₹{{ '%.0f'|format(mf.target_amount) }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="divider"></div>
+  {% endif %}
 
   <div class="dash-two-col">
     <div>

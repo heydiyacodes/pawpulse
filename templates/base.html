@@ -20,6 +20,7 @@
     <li><a href="{{ url_for('emergencies_list') }}" class="{{ 'active' if request.endpoint == 'emergencies_list' }}">Emergencies</a></li>
     {% if current_feeder %}
     <li><a href="{{ url_for('dashboard') }}"       class="{{ 'active' if request.endpoint == 'dashboard' }}">Dashboard</a></li>
+    <li><a href="{{ url_for('my_sponsorships') }}"  class="{{ 'active' if request.endpoint == 'my_sponsorships' }}">Sponsorships</a></li>
     {% endif %}
   </ul>
   <div class="nav-right">
