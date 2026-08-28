@@ -606,6 +606,8 @@ def api_feeding_logs(dog_id):
 @app.route("/seed-db")
 def seed_db_endpoint():
     """One-time database seed route for cloud deployments without shell access (e.g. Render free tier)."""
+    if Dog.query.count() > 0 and request.args.get("force") != "true":
+        return "<h3>Database already contains data!</h3><p>Your database is seeded. To re-seed, visit <a href='/seed-db?force=true'>/seed-db?force=true</a>.</p><p><a href='/'>Go to homepage</a></p>"
     try:
         from seed import seed
         seed()
