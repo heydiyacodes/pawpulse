@@ -38,6 +38,9 @@
       <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-top:auto">
         <a href="{{ url_for('report_emergency') }}?dog_id={{ dog.id }}" class="btn btn-danger">🚨 Report Emergency</a>
         {% if current_feeder %}
+        <form method="POST" action="{{ url_for('feed_dog', dog_id=dog.id) }}" style="display:inline;">
+          <button type="submit" class="btn btn-primary">🍖 I fed {{ dog.name }} today</button>
+        </form>
         <button class="btn btn-outline" onclick="document.getElementById('medModal').classList.add('open')">+ Medical Record</button>
         {% endif %}
       </div>
@@ -93,6 +96,28 @@
       <div class="empty-state"><div class="icon">✅</div><h3>No emergencies</h3><p>Clean record for {{ dog.name }}.</p></div>
       {% endif %}
     </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="margin-top: 1rem;">
+    <div class="section-title"><h2>Feeding activity</h2></div>
+    {% if dog.feeding_logs %}
+    <div class="timeline">
+      {% for log in dog.feeding_logs[:10] %}
+      <div class="timeline-item">
+        <div class="timeline-dot">🍖</div>
+        <div class="timeline-body">
+          <h4>Fed by {{ log.feeder.name if log.feeder else 'Feeder' }}</h4>
+          {% if log.notes %}<p>{{ log.notes }}</p>{% endif %}
+          <div class="date">{{ log.fed_at.strftime('%d %b %Y, %H:%M') if log.fed_at else '' }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="icon">🥣</div><h3>No feeding logs yet</h3><p>Be the first to log a meal for {{ dog.name }}.</p></div>
+    {% endif %}
   </div>
 </div>
 

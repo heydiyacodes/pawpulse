@@ -223,3 +223,23 @@ def haversine_km(lat1, lng1, lat2, lng2):
     dlam = math.radians(lng2 - lng1)
     a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+# ──────────────────────────────────────────────────────────────
+#  FEEDING LOG — Phase 2
+# ──────────────────────────────────────────────────────────────
+class FeedingLog(db.Model):
+    __tablename__ = "feeding_log"
+
+    id        = db.Column(db.Integer, primary_key=True)
+    dog_id    = db.Column(db.Integer, db.ForeignKey("dog.id"), nullable=False)
+    feeder_id = db.Column(db.Integer, db.ForeignKey("feeder.id"), nullable=False)
+    fed_at    = db.Column(db.DateTime, default=datetime.utcnow)
+    notes     = db.Column(db.Text)
+
+    dog    = db.relationship("Dog", backref=db.backref("feeding_logs", order_by="desc(FeedingLog.fed_at)", lazy=True))
+    feeder = db.relationship("Feeder", backref=db.backref("feeding_logs", lazy=True))
+
+    def __repr__(self):
+        return f"<FeedingLog id={self.id} dog_id={self.dog_id} feeder_id={self.feeder_id}>"
+

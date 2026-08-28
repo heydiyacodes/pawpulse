@@ -15,7 +15,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import Config
-from models import db, Dog, Feeder, MedicalRecord, EmergencyReport, haversine_km
+from models import db, Dog, Feeder, MedicalRecord, EmergencyReport, FeedingLog, haversine_km
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -550,6 +550,48 @@ def api_me():
         "is_verified": f.is_verified,
         "role":        f.role_label,
     })
+
+
+# ══════════════════════════════════════════════════════════════
+#  PHASE 2 — FEEDING LOG ROUTES
+# ══════════════════════════════════════════════════════════════
+
+@app.route("/dogs/<int:dog_id>/feed", methods=["POST"])
+@login_required
+def feed_dog(dog_id):
+    dog = Dog.query.get_or_404(dog_id)
+    feeder = get_current_feeder()
+    notes = request.form.get("notes", "").strip() or None
+
+    log = FeedingLog(
+        dog_id=dog.id,
+        feeder_id=feeder.id,
+        fed_at=datetime.utcnow(),
+        notes=notes
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    flash(f"Logged feeding for {dog.name}!", "success")
+    return redirect(url_for("dog_profile", dog_id=dog.id))
+
+
+@app.route("/api/dogs/<int:dog_id>/feeding-logs")
+def api_feeding_logs(dog_id):
+    Dog.query.get_or_404(dog_id)
+    logs = (FeedingLog.query
+            .filter_by(dog_id=dog_id)
+            .order_by(FeedingLog.fed_at.desc())
+            .limit(10)
+            .all())
+    return jsonify([{
+        "id":          l.id,
+        "dog_id":      l.dog_id,
+        "feeder_id":   l.feeder_id,
+        "feeder_name": l.feeder.name if l.feeder else "Unknown",
+        "fed_at":      l.fed_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "notes":       l.notes or ""
+    } for l in logs])
 
 
 # ══════════════════════════════════════════════════════════════
